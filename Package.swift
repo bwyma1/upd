@@ -1,0 +1,42 @@
+// swift-tools-version: 6.2
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+import PackageDescription
+
+let package = Package(
+    name: "upd",
+	platforms:[
+		.macOS(.v15)
+	],
+    products: [
+        // Products define the executables and libraries a package produces, making them visible to other packages.
+        .executable(
+            name: "upd",
+            targets: ["upd"]
+        ),
+    ],
+	dependencies:[
+		.package(url:"https://github.com/tannerdsilva/rawdog.git", "20.0.0"..<"21.0.0"),
+		.package(url:"https://github.com/tannerdsilva/bedrock.git", "7.0.1"..<"8.0.0"),
+		.package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"f4b8d61c0efe11ef2d8042364e0a636f7f8331f0"),
+		.package(url:"https://github.com/apple/swift-argument-parser.git", "1.6.1"..<"2.0.0"),
+		.package(url:"https://github.com/tannerdsilva/QuickLMDB.git", "14.0.0"..<"14.1.0")
+	],
+targets: [
+        // Targets are the basic building blocks of a package, defining a module or a test suite.
+        // Targets can depend on other targets in this package and products from dependencies.
+		.executableTarget(
+            name: "upd",
+			dependencies: [.product(name:"wireguard-userspace-nio", package:"wireguard-swift"),
+						   .product(name:"QuickLMDB", package:"QuickLMDB"),
+						   .product(name:"bedrock", package:"bedrock"),
+						   .product(name:"bedrock_fifo", package:"bedrock"),
+						   .product(name:"RAW_base64", package:"rawdog"),
+						   .product(name:"ArgumentParser", package:"swift-argument-parser")]
+        ),
+        .testTarget(
+            name: "updTests",
+            dependencies: ["upd"]
+        ),
+    ]
+)
