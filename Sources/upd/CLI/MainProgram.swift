@@ -1,8 +1,10 @@
 import ArgumentParser
-import class Foundation.FileManager
+import Foundation
 import bedrock
 import Logging
+import RAW_dh25519
 import struct QuickLMDB.Transaction
+import Configuration
 
 @main
 struct CLI:AsyncParsableCommand {
@@ -16,7 +18,8 @@ struct CLI:AsyncParsableCommand {
 //		version:"\(GitRepositoryInfo.tag) (\(GitRepositoryInfo.commitHash))\(GitRepositoryInfo.commitRevisionHash != nil ? " commit revision: \(GitRepositoryInfo.commitRevisionHash!.prefix(8))" : "")",
 		subcommands:[
 			Run.self,
-			Uptime.self
+			Uptime.self,
+			Config.self
 		]
 	)
 
@@ -33,7 +36,7 @@ struct CLI:AsyncParsableCommand {
 		struct Clear:ParsableCommand {
 			static let configuration = CommandConfiguration(
 				commandName:"clear",
-				abstract:"a subcommand for clearing rain data."
+				abstract:"a subcommand for clearing uptime data."
 			)
 
 			@Option(help:"the path to the database directory, defaults to the user's home directory")
@@ -41,10 +44,8 @@ struct CLI:AsyncParsableCommand {
 
 			func run() throws {
 				let logger = Logger(label:"system-uptime.clear")
-//				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-//				try RainDB.deleteDatabase(base:homeDirectory, logLevel:.trace)
-//				let metaDB = try MetadataDB(base:homeDirectory, logLevel:.trace)
-//				try metaDB.clearCumulativeRainValue(logLevel:.trace)
+				let uptimeDB = try UptimeDB(base:databasePath, logLevel:.debug)
+				try uptimeDB.clearDatabase()
 				logger.info("successfully cleared rain database")
 			}
 		}
@@ -52,22 +53,21 @@ struct CLI:AsyncParsableCommand {
 		struct List:ParsableCommand {
 			static let configuration = CommandConfiguration(
 				commandName:"list",
-				abstract:"a subcommand for listing rain data."
+				abstract:"a subcommand for listing system uptime data."
 			)
 
 			@Option(help:"the path to the database directory, defaults to the user's home directory")
 			var databasePath:Path = CLI.defaultDBBasePath()
 
 			func run() throws {
-				let logger = Logger(label:"weatherboi.rain.list")
-//				let rainDB = try RainDB(base:databasePath, logLevel:.trace)
-//				let allData = try rainDB.listAllRainData(logLevel:.debug)
-//				var sumValue:Double = 0
-//				for (date, value) in allData.sorted(by: { $0.key < $1.key }) {
-//					logger.info("rain data for \(date): \(value)")
-//					sumValue += Double(value)
-//				}
-//				logger.info("total rain data: \(UInt32(sumValue))")
+				let logger = Logger(label:"system-uptime.list")
+				let uptimeDB = try UptimeDB(base:databasePath, logLevel:.debug)
+				let allData = try uptimeDB.listAllSystemUptimeData(logLevel: .debug)
+				let formatter = DateFormatter()
+				formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+				for (uptime, rtt) in allData.sorted(by: { $0.key < $1.key }) {
+					logger.info("Handshake Date: \(formatter.string(from: dateFromNIOUInt64(uptime.date.RAW_native()))) RTT: \(rtt.RAW_native() / 1_000_000) ms", metadata: ["public-key":"\(String(describing:uptime.key))"])
+				}
 			}
 		}
 	}

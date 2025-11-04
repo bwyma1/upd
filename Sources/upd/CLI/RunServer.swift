@@ -1,6 +1,7 @@
 import ArgumentParser
 import NIO
 import ServiceLifecycle
+import Foundation
 import Logging
 import bedrock
 import bedrock_fifo
@@ -25,41 +26,50 @@ extension CLI {
 		var myPort:Int
 		@Argument(help:"The private key that the initiator will use to forge an initial handshake.")
 		var myPrivateKey:MemoryGuarded<RAW_dh25519.PrivateKey>
-		@Argument(help:"The port and public key that the responder is expected to be operating with.")
-		var peers:[Peer]
 
 		func run() async throws {
-			var cliLogger = Logger(label: "wg-test-tool.initiator")
-			cliLogger.logLevel = .debug
+			var tempLogger = Logger(label: "system-uptime-tool")
+			tempLogger.logLevel = .debug
+			let cliLogger = tempLogger
+			
+			let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
+			let jsonURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+			let cfg = try loadConfig(from: jsonURL)
 			
 			let uptimeDB = try UptimeDB(base:databasePath, logLevel:.debug)
-			_ = try await withThrowingTaskGroup(body: { foo in
-				var myPeers:[PeerInfo] = []
-				for peer in peers {
-					var handshakeSignals = FIFO<NIODeadline, Swift.Error>()
-					myPeers.append(PeerInfo(publicKey:peer.publicKey, ipAddress:ipAddress, port: peer.port, internalKeepAlive: .seconds(30), inboundData: FIFO<ByteBuffer, Swift.Error>(), inboundHandshakeSignal: handshakeSignals))
-				}
-				let myInterface = try WGInterface<[UInt8]>(staticPrivateKey:myPrivateKey, mtu:1400, initialConfiguration:myPeers, logLevel:.info, encryptedPacketProcessor: DefaultEPP(), listeningPort: myPort)
-				
-				foo.addTask {
-					try await myInterface.run()
-				}
-				
-				cliLogger.info("WireGuard interface started. Waiting for channel initialization...")
-				try await myInterface.waitForChannelInit()
-				
-				for peerInfo in myPeers {
-					foo.addTask {
-						let iterator = peerInfo.inboundHandshakeSignal.makeAsyncConsumer()
-						while(true) {
-							if let incomingSignal = try await iterator.next() {
-								// add info to database
+			let coalescer = Coalescer(database: uptimeDB, logLevel: .debug)
+			try await cancelWhenGracefulShutdown( {
+				_ = try await withThrowingTaskGroup(body: { foo in
+					var myPeers:[PeerInfo] = []
+					for peer in cfg.peers {
+						let handshakeSignals = FIFO<HandshakeInfo, Swift.Error>()
+						myPeers.append(PeerInfo(publicKey:peer.publicKey, ipAddress:ipAddress, port: peer.port, internalKeepAlive: .seconds(peer.keepAlive), inboundData: FIFO<ByteBuffer, Swift.Error>(), inboundHandshakeSignal: handshakeSignals))
+					}
+					let myInterface = try WGInterface<[UInt8]>(staticPrivateKey:myPrivateKey, mtu:1400, initialConfiguration:myPeers, logLevel:.critical, encryptedPacketProcessor: DefaultEPP(), listeningPort: myPort)
+					
+					for peerInfo in myPeers {
+						foo.addTask {
+							let iterator = peerInfo.inboundHandshakeSignal.makeAsyncConsumer()
+							while !Task.isCancelled {
+								if let incomingSignal = try await iterator.next(whenTaskCancelled: .finish) {
+									try await coalescer.record(incomingSignal.recordedTime, key: peerInfo.publicKey, rtt: incomingSignal.rtt)
+								}
 							}
 						}
 					}
-				}
-				
-				try await Task.sleep(for: .seconds(100000))
+					
+					for peer in cfg.peers {
+						foo.addTask {
+							cliLogger.info("WireGuard interface started. Waiting for channel initialization...")
+							try await myInterface.waitForChannelInit()
+							try await myInterface.write(publicKey: peer.publicKey, data: [])
+						}
+					}
+
+					try await ServiceGroup(services:[myInterface], gracefulShutdownSignals:[.sigterm, .sigint], logger:Logger(label:"upd")).run()
+					
+					try await foo.waitForAll()
+				})
 			})
 		}
 	}
