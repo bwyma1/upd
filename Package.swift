@@ -18,8 +18,8 @@ let package = Package(
 	dependencies:[
 		.package(url:"https://github.com/tannerdsilva/rawdog.git", "20.0.0"..<"21.0.0"),
 		.package(url:"https://github.com/tannerdsilva/bedrock.git", "7.0.1"..<"8.0.0"),
-		.package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"06109227446adcaae47cb23758cdc1568087e945"),
-//		.package(path: "../wireguard-swift"),
+		// .package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"06109227446adcaae47cb23758cdc1568087e945"),
+		.package(path: "../wireguard-swift"),
 		.package(url: "https://github.com/apple/swift-configuration", .upToNextMinor(from: "0.2.0")),
 		.package(url:"https://github.com/apple/swift-argument-parser.git", "1.6.1"..<"2.0.0"),
 		.package(url:"https://github.com/tannerdsilva/QuickLMDB.git", "14.0.0"..<"14.1.0")
