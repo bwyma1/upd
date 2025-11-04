@@ -12,7 +12,6 @@ import wireguard_userspace_nio
 
 struct MainJournalService:Service {
 	var databasePath:Path = CLI.defaultDBBasePath()
-	var ipAddress:String
 	var myPort:Int
 	var myPrivateKey:MemoryGuarded<RAW_dh25519.PrivateKey>
 	func run() async throws {
@@ -26,12 +25,12 @@ struct MainJournalService:Service {
 		
 		let uptimeDB = try UptimeDB(base:databasePath, logLevel:.debug)
 		let coalescer = Coalescer(database: uptimeDB, logLevel: .debug)
-		try await cancelOnGracefulShutdown {
+		try await cancelWhenGracefulShutdown {
 			_ = try await withThrowingTaskGroup(body: { foo in
 				var myPeers:[PeerInfo] = []
 				for peer in cfg.peers {
 					let handshakeSignals = FIFO<HandshakeInfo, Swift.Error>()
-					myPeers.append(PeerInfo(publicKey:peer.publicKey, ipAddress:ipAddress, port: peer.port, internalKeepAlive: .seconds(peer.keepAlive), inboundData: FIFO<ByteBuffer, Swift.Error>(), inboundHandshakeSignal: handshakeSignals))
+					myPeers.append(PeerInfo(publicKey:peer.publicKey, ipAddress:peer.ipAddress, port: peer.port, internalKeepAlive: .seconds(peer.keepAlive), inboundData: FIFO<ByteBuffer, Swift.Error>(), inboundHandshakeSignal: handshakeSignals))
 				}
 				let myInterface = try WGInterface<[UInt8]>(staticPrivateKey:myPrivateKey, mtu:1400, initialConfiguration:myPeers, logLevel:.critical, encryptedPacketProcessor: DefaultEPP(), listeningPort: myPort)
 				
@@ -70,8 +69,6 @@ extension CLI {
 		@Option(help:"the path to the database directory, defaults to the user's home directory")
 		var databasePath:Path = CLI.defaultDBBasePath()
 
-		@Argument(help: "The IP address of the responder.")
-		var ipAddress:String
 		@Argument(help: "The port number that the I am is listening on.")
 		var myPort:Int
 		@Argument(help:"The private key that the initiator will use to forge an initial handshake.")
@@ -79,7 +76,7 @@ extension CLI {
 
 		func run() async throws {
 			let logger = Logger(label: "system-uptime-tool")
-			let service = MainJournalService(databasePath: databasePath, ipAddress: ipAddress, myPort: myPort, myPrivateKey: myPrivateKey)
+			let service = MainJournalService(databasePath: databasePath, myPort: myPort, myPrivateKey: myPrivateKey)
 			try await ServiceGroup(services:[service], logger: logger).run()
 		}
 	}

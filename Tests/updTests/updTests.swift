@@ -35,8 +35,8 @@ extension UptimeDaemonTests {
 		
 		@Test func testWritingToConfig() throws {
 			var appConfig = AppConfig()
-			let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), port: 8080, keepAlive: 25)
-			let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), port: 9021, keepAlive: 30)
+			let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), ipAddress: "127.0.0.1", port: 8080, keepAlive: 25)
+			let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), ipAddress: "127.0.0.2", port: 9021, keepAlive: 30)
 			appConfig.peers.append(newPeerA)
 			appConfig.peers.append(newPeerB)
 			
@@ -54,8 +54,8 @@ extension UptimeDaemonTests {
 		
 		@Test func testReadingFromConfig() throws {
 			var appConfig = AppConfig()
-			let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), port: 8080, keepAlive: 25)
-			let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), port: 9021, keepAlive: 30)
+			let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), ipAddress: "127.0.0.1", port: 8080, keepAlive: 25)
+			let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), ipAddress: "127.0.0.2", port: 9021, keepAlive: 30)
 			appConfig.peers.append(newPeerA)
 			appConfig.peers.append(newPeerB)
 			
@@ -68,8 +68,8 @@ extension UptimeDaemonTests {
 		
 		@Test func testModifyConfig() throws {
 			var appConfig = AppConfig()
-			let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), port: 8080, keepAlive: 25)
-			let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), port: 9021, keepAlive: 30)
+			let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), ipAddress: "127.0.0.1", port: 8080, keepAlive: 25)
+			let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), ipAddress: "127.0.0.2", port: 9021, keepAlive: 30)
 			appConfig.peers.append(newPeerA)
 			
 			try writeConfig(appConfig, to: testURL)
@@ -86,7 +86,8 @@ extension UptimeDaemonTests {
 }
 
 @Test func slackMessage() async throws {
-	
+	let env = try loadEnvFile()
+	let response = try await triggerSlackWorkflow(webhookURL: URL(string:env["SLACK_WEBHOOK_URL"]!)!, workflowID: "Wf09QL1QBDS7", inputs: ["peerPublicKey":"Example Peer Public Key", "notifierPublicKey":"Example Notifier Public Key", "ipAddress":"Example IP Address", "port":"Example port"])
 }
 
 @Test func example() async throws {
@@ -102,8 +103,8 @@ extension UptimeDaemonTests {
 		fileManager.createFile(atPath: jsonPath.path(), contents: emptyJSONData)
 	}
 	var appConfig = AppConfig()
-	let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), port: 8080, keepAlive: 25)
-	let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), port: 9021, keepAlive: 30)
+	let newPeerA = Peer(publicKey: PublicKey(privateKey: privateKeyA), ipAddress: "127.0.0.1", port: 8080, keepAlive: 25)
+	let newPeerB = Peer(publicKey: PublicKey(privateKey: privateKeyB), ipAddress: "127.0.0.2", port: 9021, keepAlive: 30)
 	appConfig.peers.append(newPeerA)
 	appConfig.peers.append(newPeerB)
 	

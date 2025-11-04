@@ -37,6 +37,7 @@ extension RAW_dh25519.PublicKey {
 
 struct Peer : Codable, Hashable {
 	var publicKey:RAW_dh25519.PublicKey
+	var ipAddress:String
 	var port:Int
 	var keepAlive:Int64
 }
@@ -104,6 +105,8 @@ extension CLI {
 			
 			@Argument(help: "The public key of the peer.")
 			var publicKey:PublicKey
+			@Argument(help: "The IP address of the responder.")
+			var ipAddress:String
 			@Argument(help: "The port number of the peer.")
 			var port:Int
 			@Argument(help: "The internal keep-alive time of the peer (seconds).")
@@ -117,13 +120,13 @@ extension CLI {
 				try editConfig(at: jsonURL) { cfg in
 					if let existingIndex = cfg.peers.firstIndex(where: { $0.publicKey == publicKey }) {
 						if overwrite {
-							cfg.peers[existingIndex] = Peer(publicKey:publicKey, port:port, keepAlive:keepAlive)
+							cfg.peers[existingIndex] = Peer(publicKey:publicKey, ipAddress: ipAddress, port:port, keepAlive:keepAlive)
 							logger.info("Overwriting peer in configuration")
 						} else {
 							logger.info("Peer already exists in configuration")
 						}
 					} else {
-						cfg.peers.append(Peer(publicKey:publicKey, port:port, keepAlive:keepAlive))
+						cfg.peers.append(Peer(publicKey:publicKey, ipAddress: ipAddress, port:port, keepAlive:keepAlive))
 						logger.info("Adding peer to configuration")
 					}
 				}
@@ -189,7 +192,7 @@ extension CLI {
 
 				let cfg = try loadConfig(from: jsonURL)
 				for peer in cfg.peers {
-					logger.info("Public Key:\(String(describing: peer.publicKey)), Port:\(peer.port), KeepAlive:\(peer.keepAlive)")
+					logger.info("Public Key:\(String(describing: peer.publicKey)), IP Address:\(peer.ipAddress), Port:\(peer.port), KeepAlive:\(peer.keepAlive)")
 				}
 			}
 		}

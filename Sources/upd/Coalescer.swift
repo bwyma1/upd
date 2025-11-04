@@ -47,7 +47,9 @@ actor Coalescer {
 		}
 		for handshake in sortedHandshakes {
 			let uptime = UptimeID(deadline: handshake.time, key: handshake.key)
-			try uptimeDB.scribeNewHandshakeValue(date: uptime, rtt: RTT(RAW_native:handshake.rtt.uptimeNanoseconds), logLevel: log.logLevel)
+			Task {
+				try uptimeDB.scribeNewHandshakeValue(date: uptime, rtt: RTT(RAW_native:handshake.rtt.uptimeNanoseconds), logLevel: log.logLevel)
+			}
 		}
 	}
 }
