@@ -9,7 +9,6 @@ let package = Package(
 		.macOS(.v15)
 	],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .executable(
             name: "upd",
             targets: ["upd"]
@@ -22,11 +21,11 @@ let package = Package(
 //		.package(path: "../wireguard-swift"),
 		.package(url: "https://github.com/apple/swift-configuration", .upToNextMinor(from: "0.2.0")),
 		.package(url:"https://github.com/apple/swift-argument-parser.git", "1.6.1"..<"2.0.0"),
-		.package(url:"https://github.com/tannerdsilva/QuickLMDB.git", "14.0.0"..<"14.1.0")
+		.package(url:"https://github.com/tannerdsilva/QuickLMDB.git", "14.0.0"..<"14.1.0"),
+//		.package(path: "../SwiftSlash")
+		.package(url:"https://github.com/tannerdsilva/SwiftSlash.git", "4.0.1"..<"5.0.0")
 	],
 targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
 		.executableTarget(
             name: "upd",
 			dependencies: [.product(name:"wireguard-userspace-nio", package:"wireguard-swift"),
@@ -35,7 +34,9 @@ targets: [
 						   .product(name:"bedrock_fifo", package:"bedrock"),
 						   .product(name:"RAW_base64", package:"rawdog"),
 						   .product(name:"ArgumentParser", package:"swift-argument-parser"),
-						   .product(name:"Configuration", package: "swift-configuration")],
+						   .product(name:"Configuration", package: "swift-configuration"),
+						   //.product(name:"SwiftSlash", package:"SwiftSlash")
+			],
 			resources: [
 				.process(".env")
 			]

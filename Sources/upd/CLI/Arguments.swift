@@ -4,6 +4,20 @@ import RAW_base64
 import ArgumentParser
 import bedrock_ip
 
+enum InactiveAction: String, CaseIterable, ExpressibleByArgument {
+	case print
+	case slack
+	case script
+
+	var help: String {
+		switch self {
+			case .print: return "Print inactive peer to the console."
+			case .slack: return "Send a message of the inactive peer to the designated Slack webhook in the .env file."
+			case .script: return "Execute an external batch script."
+		}
+	}
+}
+
 extension RAW_dh25519.PublicKey:@retroactive ExpressibleByArgument {
 	public init?(argument: String) {
 		let rawBytes = try? RAW_base64.decode(argument)

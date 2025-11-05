@@ -1,5 +1,5 @@
 {
-  "originHash" : "26d51e8ca8da65bd198f73e602f7a8aad1a0506aa0a0b5e277acd5e991af1b1f",
+  "originHash" : "f6544e36a6e96b2f259bdd257216caf899a78c40336a8a47a012dd4e820f299c",
   "pins" : [
     {
       "identity" : "bedrock",
@@ -125,6 +125,15 @@
       "state" : {
         "revision" : "395a77f0aa927f0ff73941d7ac35f2b46d47c9db",
         "version" : "1.6.3"
+      }
+    },
+    {
+      "identity" : "swiftslash",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tannerdsilva/SwiftSlash.git",
+      "state" : {
+        "revision" : "34241d583423136a89f8ef8d91c72edfbab10e08",
+        "version" : "4.0.1"
       }
     },
     {

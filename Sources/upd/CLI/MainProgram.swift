@@ -9,13 +9,12 @@ import Configuration
 @main
 struct CLI:AsyncParsableCommand {
 	static func defaultDBBasePath() -> Path {
-		return Path(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("weatherboi_lmdb").path)
+		return Path(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("upd_lmdb").path)
 	}
 
 	static let configuration = CommandConfiguration(
 		commandName:"uptime-daemon",
-		abstract:"a highly efficient daemon for capturing, storing, and redistributing data from on-premises weather stations.",
-//		version:"\(GitRepositoryInfo.tag) (\(GitRepositoryInfo.commitHash))\(GitRepositoryInfo.commitRevisionHash != nil ? " commit revision: \(GitRepositoryInfo.commitRevisionHash!.prefix(8))" : "")",
+		abstract:"a simple daemon for capturing, storing, and signaling uptime information about a system.",
 		subcommands:[
 			Run.self,
 			Uptime.self,
