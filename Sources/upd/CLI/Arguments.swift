@@ -1,7 +1,7 @@
+import ArgumentParser
 import RAW
 import RAW_dh25519
 import RAW_base64
-import ArgumentParser
 import bedrock_ip
 
 enum InactiveAction: String, CaseIterable, ExpressibleByArgument {

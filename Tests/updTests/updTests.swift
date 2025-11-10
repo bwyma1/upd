@@ -6,7 +6,6 @@ import RAW_dh25519
 import RAW_base64
 import RAW
 import bedrock
-import Configuration
 //import SwiftSlash
 
 @Test func runBatchScript() async throws {
@@ -16,7 +15,7 @@ import Configuration
 
 @Test func slackMessageFromEnv() async throws {
 	let env = try loadEnvFile()
-	let response = try await triggerSlackWorkflow(webhookURL: URL(string:env["SLACK_WEBHOOK_URL"]!)!, workflowID: "Wf09QL1QBDS7", inputs: ["peerPublicKey":"Example Peer Public Key", "notifierPublicKey":"Example Notifier Public Key", "ipAddress":"Example IP Address", "port":"Example port"])
+	let response = try await triggerSlackWorkflow(webhookURL: URL(string:env["SLACK_WEBHOOK_URL"]!)!, workflowID: env["WORKFLOW_ID"]!, inputs: ["peerPublicKey":"Example Peer Public Key", "notifierPublicKey":"Example Notifier Public Key", "ipAddress":"Example IP Address", "port":"Example port"])
 	#expect(response.statusCode == 200)
 }
 

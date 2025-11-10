@@ -1,5 +1,5 @@
 {
-  "originHash" : "f6544e36a6e96b2f259bdd257216caf899a78c40336a8a47a012dd4e820f299c",
+  "originHash" : "ef298f3b380d9cedab671d5dd88aec0540356ef5be54ff65c5932024cc3109f6",
   "pins" : [
     {
       "identity" : "bedrock",
@@ -74,15 +74,6 @@
       }
     },
     {
-      "identity" : "swift-configuration",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-configuration",
-      "state" : {
-        "revision" : "9d5e40727efd060fb9b41b69932738f478abaa43",
-        "version" : "0.2.0"
-      }
-    },
-    {
       "identity" : "swift-log",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log.git",
@@ -105,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-server/swift-service-lifecycle",
       "state" : {
-        "revision" : "0fcc4c9c2d58dd98504c06f7308c86de775396ff",
-        "version" : "2.9.0"
+        "revision" : "1de37290c0ab3c5a96028e0f02911b672fd42348",
+        "version" : "2.9.1"
       }
     },
     {
@@ -128,20 +119,11 @@
       }
     },
     {
-      "identity" : "swiftslash",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tannerdsilva/SwiftSlash.git",
-      "state" : {
-        "revision" : "34241d583423136a89f8ef8d91c72edfbab10e08",
-        "version" : "4.0.1"
-      }
-    },
-    {
       "identity" : "wireguard-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tannerdsilva/wireguard-swift",
       "state" : {
-        "revision" : "06109227446adcaae47cb23758cdc1568087e945"
+        "revision" : "b55e6613c6b9c1a8a2c4881b104334ce6e107740"
       }
     }
   ],

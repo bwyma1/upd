@@ -1,37 +1,37 @@
-import ArgumentParser
 import Foundation
 import Logging
-import bedrock
-import bedrock_fifo
+import ArgumentParser
+import RAW
 import RAW_dh25519
 import RAW_base64
-import RAW
+import bedrock
+import bedrock_fifo
 
-extension PublicKey: @retroactive Decodable {}
-extension PublicKey: @retroactive Encodable {}
-extension RAW_dh25519.PublicKey {
-
-	enum CodingKeys: String, CodingKey { case key }
-
-	public init(from decoder: Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-
-		let base64 = try container.decode(String.self, forKey: .key)
-		let bytes = try RAW_base64.decode(base64)
-		guard bytes.count == 32 else {
-			throw DecodingError.dataCorrupted(
-				DecodingError.Context(codingPath: [CodingKeys.key],
-									  debugDescription: "Public key must be 32 bytes")
-			)
-		}
-		self = RAW_dh25519.PublicKey(RAW_staticbuff: bytes)
-	}
-
-	public func encode(to encoder: Encoder) throws {
-		var container = encoder.container(keyedBy: CodingKeys.self)
-		try container.encode(String(describing: self), forKey: .key)
-	}
-}
+//extension PublicKey: @retroactive Decodable {}
+//extension PublicKey: @retroactive Encodable {}
+//extension RAW_dh25519.PublicKey {
+//
+//	enum CodingKeys: String, CodingKey { case key }
+//
+//	public init(from decoder: Decoder) throws {
+//		let container = try decoder.container(keyedBy: CodingKeys.self)
+//
+//		let base64 = try container.decode(String.self, forKey: .key)
+//		let bytes = try RAW_base64.decode(base64)
+//		guard bytes.count == 32 else {
+//			throw DecodingError.dataCorrupted(
+//				DecodingError.Context(codingPath: [CodingKeys.key],
+//									  debugDescription: "Public key must be 32 bytes")
+//			)
+//		}
+//		self = RAW_dh25519.PublicKey(RAW_staticbuff: bytes)
+//	}
+//
+//	public func encode(to encoder: Encoder) throws {
+//		var container = encoder.container(keyedBy: CodingKeys.self)
+//		try container.encode(String(describing: self), forKey: .key)
+//	}
+//}
 
 
 
@@ -85,12 +85,13 @@ extension CLI {
 	struct Config:AsyncParsableCommand {
 		static let configuration = CommandConfiguration(
 			commandName:"config",
-			abstract:"a subcommand for peer configuration operations",
+			abstract:"Subcommand for peer configuration operations",
 			subcommands:[
 				Add.self,
 				Remove.self,
+				List.self,
 				Clear.self,
-				List.self
+				Delete.self
 			]
 		)
 
@@ -115,9 +116,9 @@ extension CLI {
 			func run() async throws {
 				var logger = Logger(label: "configuration")
 				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let jsonURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
 				logger[metadataKey:"public-key"] = "\(String(describing:publicKey))"
-				try editConfig(at: jsonURL) { cfg in
+				try editConfig(at: configurationURL) { cfg in
 					if let existingIndex = cfg.peers.firstIndex(where: { $0.publicKey == publicKey }) {
 						if overwrite {
 							cfg.peers[existingIndex] = Peer(publicKey:publicKey, ipAddress: ipAddress, port:port, keepAlive:keepAlive)
@@ -146,9 +147,9 @@ extension CLI {
 				var logger = Logger(label: "configuration")
 				
 				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let jsonURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
 				logger[metadataKey:"public-key"] = "\(String(describing:publicKey))"
-				try editConfig(at: jsonURL) { cfg in
+				try editConfig(at: configurationURL) { cfg in
 					let beforeCount = cfg.peers.count
 					cfg.peers.removeAll(where: { $0.publicKey == publicKey })
 
@@ -157,6 +158,24 @@ extension CLI {
 					} else {
 						logger.info("No peer found with public key: \(publicKey)")
 					}
+				}
+			}
+		}
+		
+		struct List: AsyncParsableCommand {
+			static let configuration = CommandConfiguration(
+				commandName: "list",
+				abstract: "lists the current peer configuration"
+			)
+
+			func run() async throws {
+				let logger = Logger(label: "configuration")
+				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
+				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+
+				let cfg = try loadConfig(from: configurationURL)
+				for peer in cfg.peers {
+					logger.info("Public Key:\(String(describing: peer.publicKey)), IP Address:\(peer.ipAddress), Port:\(peer.port), KeepAlive:\(peer.keepAlive)")
 				}
 			}
 		}
@@ -170,30 +189,27 @@ extension CLI {
 			func run() async throws {
 				let logger = Logger(label: "configuration")
 				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let jsonURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
 
-				try editConfig(at: jsonURL) { cfg in
+				try editConfig(at: configurationURL) { cfg in
 					cfg.peers = []
 				}
 				logger.info("Successfully cleared the configuration file")
 			}
 		}
 		
-		struct List: AsyncParsableCommand {
+		struct Delete: AsyncParsableCommand {
 			static let configuration = CommandConfiguration(
-				commandName: "list",
-				abstract: "lists the current peer configuration"
+				commandName: "delete",
+				abstract: "deletes the current peer configuration file"
 			)
 
 			func run() async throws {
 				let logger = Logger(label: "configuration")
 				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
-				let jsonURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
-
-				let cfg = try loadConfig(from: jsonURL)
-				for peer in cfg.peers {
-					logger.info("Public Key:\(String(describing: peer.publicKey)), IP Address:\(peer.ipAddress), Port:\(peer.port), KeepAlive:\(peer.keepAlive)")
-				}
+				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
+				try FileManager.default.removeItem(at: configurationURL)
+				logger.info("Successfully cleared the configuration file")
 			}
 		}
 	}

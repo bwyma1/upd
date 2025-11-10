@@ -1,10 +1,7 @@
-import ArgumentParser
 import Foundation
-import bedrock
 import Logging
-import RAW_dh25519
-import struct QuickLMDB.Transaction
-import Configuration
+import ArgumentParser
+import bedrock
 
 @main
 struct CLI:AsyncParsableCommand {
@@ -25,10 +22,11 @@ struct CLI:AsyncParsableCommand {
 	struct Uptime:AsyncParsableCommand {
 		static let configuration = CommandConfiguration(
 			commandName:"uptime",
-			abstract:"a subcommand for sytem uptime related operations.",
+			abstract:"Subcommand for uptime database related operations.",
 			subcommands:[
 				List.self,
-				Clear.self
+				Clear.self,
+				Delete.self
 			]
 		)
 
@@ -67,6 +65,22 @@ struct CLI:AsyncParsableCommand {
 				for (uptime, rtt) in allData.sorted(by: { $0.key < $1.key }) {
 					logger.info("Handshake Date: \(formatter.string(from: dateFromNIOUInt64(uptime.date.RAW_native()))) RTT: \(rtt.RAW_native() / 1_000_000) ms", metadata: ["public-key":"\(String(describing:uptime.key))"])
 				}
+			}
+		}
+		
+		struct Delete:ParsableCommand {
+			static let configuration = CommandConfiguration(
+				commandName:"delete",
+				abstract:"a subcommand for deleting the system uptime database."
+			)
+
+			@Option(help:"the path to the database directory, defaults to the user's home directory")
+			var databasePath:Path = CLI.defaultDBBasePath()
+
+			func run() throws {
+				let logger = Logger(label:"system-uptime.clear")
+				try UptimeDB.deleteDatabase(base: databasePath, logLevel: .info)
+				logger.info("successfully cleared rain database")
 			}
 		}
 	}

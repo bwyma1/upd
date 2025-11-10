@@ -1,8 +1,6 @@
 import Logging
-import NIO
-import Foundation
 import RAW_dh25519
-import QuickLMDB
+import NIO
 
 actor Coalescer {
 	private var handshakes: [(time:NIODeadline, key:PublicKey, rtt:NIODeadline)] = []
