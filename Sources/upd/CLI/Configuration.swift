@@ -6,51 +6,17 @@ import RAW_dh25519
 import RAW_base64
 import bedrock
 import bedrock_fifo
-
-//extension PublicKey: @retroactive Decodable {}
-//extension PublicKey: @retroactive Encodable {}
-//extension RAW_dh25519.PublicKey {
-//
-//	enum CodingKeys: String, CodingKey { case key }
-//
-//	public init(from decoder: Decoder) throws {
-//		let container = try decoder.container(keyedBy: CodingKeys.self)
-//
-//		let base64 = try container.decode(String.self, forKey: .key)
-//		let bytes = try RAW_base64.decode(base64)
-//		guard bytes.count == 32 else {
-//			throw DecodingError.dataCorrupted(
-//				DecodingError.Context(codingPath: [CodingKeys.key],
-//									  debugDescription: "Public key must be 32 bytes")
-//			)
-//		}
-//		self = RAW_dh25519.PublicKey(RAW_staticbuff: bytes)
-//	}
-//
-//	public func encode(to encoder: Encoder) throws {
-//		var container = encoder.container(keyedBy: CodingKeys.self)
-//		try container.encode(String(describing: self), forKey: .key)
-//	}
-//}
-
-
-
-struct Peer : Codable, Hashable {
-	var publicKey:RAW_dh25519.PublicKey
-	var ipAddress:String
-	var port:Int
-	var keepAlive:Int64
-}
+import wireguard_userspace_nio
 
 struct AppConfig: Codable {
-	var peers: [Peer] = []
+	var peers: [PeerInfoNoFifo] = []
 	enum CodingKeys: String, CodingKey { case peers }
 	
 	init(){}
 
 	init(from decoder: Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
-		peers = try container.decodeIfPresent([Peer].self, forKey: .peers) ?? []
+		peers = try container.decodeIfPresent([PeerInfoNoFifo].self, forKey: .peers) ?? []
 	}
 }
 
@@ -121,13 +87,13 @@ extension CLI {
 				try editConfig(at: configurationURL) { cfg in
 					if let existingIndex = cfg.peers.firstIndex(where: { $0.publicKey == publicKey }) {
 						if overwrite {
-							cfg.peers[existingIndex] = Peer(publicKey:publicKey, ipAddress: ipAddress, port:port, keepAlive:keepAlive)
+							cfg.peers[existingIndex] = PeerInfoNoFifo(publicKey:publicKey, ipAddress: ipAddress, port:port, internalKeepAlive:.seconds(keepAlive))
 							logger.info("Overwriting peer in configuration")
 						} else {
 							logger.info("Peer already exists in configuration")
 						}
 					} else {
-						cfg.peers.append(Peer(publicKey:publicKey, ipAddress: ipAddress, port:port, keepAlive:keepAlive))
+						cfg.peers.append(PeerInfoNoFifo(publicKey:publicKey, ipAddress: ipAddress, port:port, internalKeepAlive:.seconds(keepAlive)))
 						logger.info("Adding peer to configuration")
 					}
 				}
@@ -175,7 +141,7 @@ extension CLI {
 
 				let cfg = try loadConfig(from: configurationURL)
 				for peer in cfg.peers {
-					logger.info("Public Key:\(String(describing: peer.publicKey)), IP Address:\(peer.ipAddress), Port:\(peer.port), KeepAlive:\(peer.keepAlive)")
+					logger.info("Public Key:\(String(describing: peer.publicKey)), IP Address, Port:\(String(describing:peer.endpoint)), KeepAlive:\(String(describing: peer.internalKeepAlive))")
 				}
 			}
 		}
@@ -190,10 +156,11 @@ extension CLI {
 				let logger = Logger(label: "configuration")
 				let homeDirectory = Path(FileManager.default.homeDirectoryForCurrentUser.path)
 				let configurationURL = URL(fileURLWithPath: homeDirectory.appendingPathComponent("peer-config.json").path())
-
-				try editConfig(at: configurationURL) { cfg in
-					cfg.peers = []
-				}
+				let emptyConfig = AppConfig()
+				let encoder = JSONEncoder()
+				encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+				let data = try encoder.encode(emptyConfig)
+				try data.write(to: configurationURL, options: .atomic)
 				logger.info("Successfully cleared the configuration file")
 			}
 		}

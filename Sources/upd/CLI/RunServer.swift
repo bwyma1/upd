@@ -10,13 +10,13 @@ import ServiceLifecycle
 import NIO
 
 actor PeerActivity {
-	var peerLastTimeActive:[Peer:NIODeadline] = [:]
-	var peerStatus:[Peer:Bool] = [:]
+	var peerLastTimeActive:[PeerInfoNoFifo:NIODeadline] = [:]
+	var peerStatus:[PeerInfoNoFifo:Bool] = [:]
 	
 	/// Records the time of a handshake with a peer.
 	/// Returns `true` if a peer is coming back online. Else, returns `false`
 	@discardableResult
-	func recordTime(peer:Peer, time:NIODeadline) -> Bool {
+	func recordTime(peer:PeerInfoNoFifo, time:NIODeadline) -> Bool {
 		peerLastTimeActive[peer] = time
 		if(peerStatus[peer] != nil && peerStatus[peer] == false) {
 			peerStatus[peer] = true
@@ -27,9 +27,9 @@ actor PeerActivity {
 	}
 	
 	/// Returns a list of newly inactive peers.
-	func checkInactivity() -> [Peer] {
+	func checkInactivity() -> [PeerInfoNoFifo] {
 		let now = NIODeadline.now()
-		var inactivePeers:[Peer] = []
+		var inactivePeers:[PeerInfoNoFifo] = []
 		for (peer, time) in peerLastTimeActive {
 			if (now - time > .seconds(240)) {
 				if(peerStatus[peer]! == true) {
@@ -46,7 +46,7 @@ struct MainJournalService:Service {
 	var databasePath:bedrock.Path = CLI.defaultDBBasePath()
 	var myPort:Int
 	var myPrivateKey:MemoryGuarded<RAW_dh25519.PrivateKey>
-	let notificationFunc: @Sendable (Peer, Bool) async throws -> Void
+	let notificationFunc: @Sendable (PeerInfoNoFifo, Bool) async throws -> Void
 	func run() async throws {
 		var tempLogger = Logger(label: "system-uptime-tool")
 		tempLogger.logLevel = .debug
@@ -67,7 +67,7 @@ struct MainJournalService:Service {
 				for peer in cfg.peers {
 					await peerActivityMonitor.recordTime(peer: peer, time: NIODeadline.now())
 					let handshakeSignals = FIFO<HandshakeInfo, Swift.Error>()
-					peerInfos.append(PeerInfo(publicKey:peer.publicKey, ipAddress:peer.ipAddress, port: peer.port, internalKeepAlive: .seconds(peer.keepAlive), inboundData: FIFO<ByteBuffer, Swift.Error>(), inboundHandshakeSignal: handshakeSignals))
+					peerInfos.append(PeerInfo(publicKey:peer.publicKey, endpoint: peer.endpoint, internalKeepAlive: peer.internalKeepAlive, inboundData: FIFO<ByteBuffer, Swift.Error>(), inboundHandshakeSignal: handshakeSignals))
 				}
 				let myInterface = try WGInterface<KeepAlive>(staticPrivateKey:myPrivateKey, mtu:1400, initialConfiguration:peerInfos, logLevel:.info, encryptedPacketProcessor: DefaultEPP(), customChannelArgs: (peers: peerInfos, loglevel:.info), listeningPort: myPort)
 				
@@ -97,6 +97,7 @@ struct MainJournalService:Service {
 					while true {
 						let inactivePeers = await peerActivityMonitor.checkInactivity()
 						for inactivePeer in inactivePeers {
+							cliLogger.info("Inactive peer. Sending notification!")
 							try await notificationFunc(inactivePeer, false)
 						}
 						try await Task.sleep(for: .seconds(20))
@@ -139,7 +140,7 @@ extension CLI {
 			func run() async throws {
 				let logger = Logger(label: "system-uptime-tool")
 				let service = MainJournalService(databasePath: databasePath, myPort: myPort, myPrivateKey: myPrivateKey, notificationFunc: { inactivePeer, status in
-					logger.info("Inactive Peer Detected!", metadata: ["status":"\(status ? "✅ active" : "❌ inactive")","peerPublicKey":"\(inactivePeer.publicKey)", "notifierPublicKey":"\(PublicKey(privateKey: myPrivateKey))", "ipAddress":"\(inactivePeer.ipAddress)", "port":"\(inactivePeer.port)"])
+					logger.info("Inactive Peer Detected!", metadata: ["status":"\(status ? "✅ active" : "❌ inactive")","peerPublicKey":"\(inactivePeer.publicKey)", "notifierPublicKey":"\(PublicKey(privateKey: myPrivateKey))", "ipAddress, Port":"\(String(describing:inactivePeer.endpoint))"])
 				})
 				try await ServiceGroup(services:[service], logger: logger).run()
 			}
@@ -163,7 +164,7 @@ extension CLI {
 				let logger = Logger(label: "system-uptime-tool")
 				let env = try loadEnvFile()
 				let service = MainJournalService(databasePath: databasePath, myPort: myPort, myPrivateKey: myPrivateKey, notificationFunc: { inactivePeer, status in
-					let response = try await triggerSlackWorkflow(webhookURL: URL(string:env["SLACK_WEBHOOK_URL"]!)!, workflowID: env["WORKFLOW_ID"]!, inputs: ["status":"\(status ? "✅ active" : "❌ inactive")","peerPublicKey":"\(inactivePeer.publicKey)", "notifierPublicKey":"\(PublicKey(privateKey: myPrivateKey))", "ipAddress":"\(inactivePeer.ipAddress)", "port":"\(inactivePeer.port)"])
+					let response = try await triggerSlackWorkflow(webhookURL: URL(string:env["SLACK_WEBHOOK_URL"]!)!, workflowID: env["WORKFLOW_ID"]!, inputs: ["status":"\(status ? "✅ active" : "❌ inactive")","peerPublicKey":"\(inactivePeer.publicKey)", "notifierPublicKey":"\(PublicKey(privateKey: myPrivateKey))", "ipAddress_Port":"\(String(describing:inactivePeer.endpoint))"])
 					if(response.statusCode != 200) {
 						logger.warning("Slack notification failed to send. Check your webhook, workflow, or connection for issues.")
 					}

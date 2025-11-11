@@ -19,9 +19,8 @@ let package = Package(
 		.package(url:"https://github.com/tannerdsilva/rawdog.git", "20.0.0"..<"21.0.0"),
 		.package(url:"https://github.com/tannerdsilva/bedrock.git", "7.0.1"..<"8.0.0"),
 		.package(url:"https://github.com/tannerdsilva/QuickLMDB.git", "14.0.0"..<"14.1.0"),
-		.package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"b55e6613c6b9c1a8a2c4881b104334ce6e107740"),
+		.package(url:"https://github.com/tannerdsilva/wireguard-swift", revision:"814cfa44a2c289e0f633d7aa42bed0c4a96050b5")
 //		.package(url:"https://github.com/tannerdsilva/SwiftSlash.git", revision:"d83d6fc6d54ffec2a631a96a095dee1861165844")
-//		.package(path: "../Forks/SwiftSlash")
 	],
 targets: [
 		.executableTarget(
